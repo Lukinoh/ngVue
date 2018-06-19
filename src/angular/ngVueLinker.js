@@ -18,6 +18,7 @@ export function ngVueLinker (componentName, jqElement, elAttributes, scope, $inj
   const inQuirkMode = $ngVue ? $ngVue.inQuirkMode() : false
   const vueHooks = $ngVue ? $ngVue.getVueHooks() : {}
   const vuexStore = $ngVue ? {store: $ngVue.getVuexStore()} : {}
+  const vueI18n = $ngVue ? {i18n: $ngVue.getVueI18n()} : {}
 
   const watchOptions = {
     depth: elAttributes.watchDepth,
@@ -37,7 +38,8 @@ export function ngVueLinker (componentName, jqElement, elAttributes, scope, $inj
       )
     },
     ...vueHooks,
-    ...vuexStore
+    ...vuexStore,
+    ...vueI18n
   })
 
   scope.$on('$destroy', () => {
