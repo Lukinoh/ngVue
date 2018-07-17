@@ -138,7 +138,7 @@
             }
         }, vueHooks, vuexStore, vueI18n));
         scope.$on("$destroy", function() {
-            vueInstance.$destroy(), vueInstance.$el.remove && vueInstance.$el.remove();
+            vueInstance.$destroy(), vueInstance.$el.remove();
         });
     }
     function ngVueComponentFactory($injector) {
