@@ -1,21 +1,25 @@
 var path = require('path')
 var fs = require('fs')
 var webpack = require('webpack')
+const VueLoaderPlugin = require('vue-loader/lib/plugin')
 
 function getExampleEntries () {
   var dir = 'example'
   var entry = {}
 
-  fs.readdirSync('./' + dir).filter(function (name) {
-    return fs.statSync('./' + dir + '/' + name).isDirectory()
-  }).forEach(function (name) {
-    entry[name] = path.resolve(__dirname, './' + name)
-  })
+  fs.readdirSync('./' + dir)
+    .filter(function (name) {
+      return fs.statSync('./' + dir + '/' + name).isDirectory()
+    })
+    .forEach(function (name) {
+      entry[name] = path.resolve(__dirname, './' + name)
+    })
 
   return entry
 }
 
 module.exports = {
+  mode: 'development', // This is used only for development purposes
   entry: getExampleEntries(),
   output: {
     path: path.resolve(__dirname, 'dist'),
@@ -23,9 +27,7 @@ module.exports = {
     filename: '[name].build.js'
   },
   resolve: {
-    modules: [
-      path.join(__dirname, '../node_modules')
-    ]
+    modules: [path.join(__dirname, '../node_modules')]
   },
   module: {
     rules: [
@@ -37,6 +39,10 @@ module.exports = {
         test: /\.js$/,
         loader: 'babel-loader',
         exclude: /node_modules/
+      },
+      {
+        test: /\.css$/,
+        use: ['vue-style-loader', 'css-loader']
       },
       {
         test: /\.(png|jpg|gif|svg)$/,
@@ -55,7 +61,8 @@ module.exports = {
   devtool: '#eval-source-map',
   performance: {
     hints: false
-  }
+  },
+  plugins: [new VueLoaderPlugin()]
 }
 
 if (process.env.NODE_ENV === 'production') {

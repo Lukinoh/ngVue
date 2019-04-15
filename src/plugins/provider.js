@@ -3,20 +3,24 @@ import Vue from 'vue'
 
 // init
 const pluginHooks = Object.create(null)
+const _warn = typeof console !== 'undefined' && typeof console.warn === 'function' ? console.warn : () => {} //  Default to a noop function
 
-// beforeCreated
-// created
-// beforeMount
-// mounted
-// beforeUpdate
-// updated
-// beforeDestroy
-// destroyed
+const defaultHooks = [
+  'beforeCreated',
+  'created',
+  'beforeMount',
+  'mounted',
+  'beforeUpdate',
+  'updated',
+  'beforeDestroy',
+  'destroyed'
+]
+
 const vueHooks = Object.create(null)
 
 function addHooks (map, hooks) {
   if (hooks) {
-    Object.keys(hooks).forEach((h) => {
+    Object.keys(hooks).forEach(h => {
       map[h] = map[h] ? map[h] : []
       map[h].push(hooks[h])
     })
@@ -31,39 +35,67 @@ function callHooks (map, name, callback) {
 }
 
 function createVueHooksMap (hookCallback) {
-  return Object.keys(vueHooks).reduce((available, name) => ({
-    ...available,
-    [name]: function () {
-      const _cb = hookCallback.bind(this)
-      callHooks(vueHooks, name, _cb)
-    }
-  }), {})
+  return Object.keys(vueHooks).reduce(
+    (available, name) => ({
+      ...available,
+      [name]: function () {
+        const _cb = hookCallback.bind(this)
+        callHooks(vueHooks, name, _cb)
+      }
+    }),
+    {}
+  )
 }
 
 function ngVueProvider ($injector) {
   let inQuirkMode = false
   let vuexStore
   let vueI18n
+  let rootProps = {}
 
   this.activeQuirkMode = () => {
     inQuirkMode = true
   }
 
-  this.enableVuex = (store) => {
-    vuexStore = store
+  this.enableVuex = store => {
+    _warn(`
+    enableVuex() is deprecated and will be removed in a future release.
+    Consider switching to setRootVueInstanceProps().
+    `)
+    Object.assign(rootProps, { store: store })
+  }
+
+  /**
+   * @param {props} Object with arbitrary properties to be added to the root Vue instance (i.e.,
+   * Vuex's `store`, Vue i18n `i18n`, Vue Router's `router`, and so on)
+   *
+   * Usage:
+   * import store from './store'
+   * import i18n from './i18n'
+   * import customProp './customVuePlugin'
+   *
+   * angular.module('app').config(($ngVueProvider) => {
+   *   $ngVueProvider.setRootVueInstanceProps({
+   *     store,
+   *     i18n,
+   *     customProp
+   *   })
+   * })
+   *
+   */
+  this.setRootVueInstanceProps = props => {
+    const hooksFound = Object.keys(props).filter(hookName => defaultHooks.includes(hookName))
+    hooksFound.forEach(hookName => delete props[hookName])
+
+    Object.assign(rootProps, props)
   }
 
   this.enableVueI18n = (instance) => {
     vueI18n = instance
   }
 
-  this.install = (plugin) => {
-    const {
-      $name,
-      $config,
-      $plugin,
-      $vue
-    } = plugin($injector)
+  this.install = plugin => {
+    const { $name, $config, $plugin, $vue } = plugin($injector)
 
     addHooks(pluginHooks, $plugin)
     addHooks(vueHooks, $vue)
@@ -73,23 +105,28 @@ function ngVueProvider ($injector) {
     })
   }
 
-  this.$get = ['$injector', ($injector) => {
-    const cb = function (hook) {
-      hook($injector, Vue, /* dynamic context */ this)
+  this.$get = [
+    '$injector',
+    $injector => {
+      const cb = function (hook) {
+        hook($injector, Vue, /* dynamic context */ this)
+      }
+
+      callHooks(pluginHooks, 'init', cb)
+
+      // Explicitly overwrite any hook defined with `setRootVueInstanceProps` so that
+      // the current behavior is kept and no breaking changes are introduced.
+      Object.assign(rootProps, createVueHooksMap(cb))
+
+      return {
+        getVueHooks: () => vueHooks,
+        getVuexStore: () => vuexStore,
+        getVueI18n: () => vueI18n,
+        getRootProps: () => rootProps,
+        inQuirkMode: () => inQuirkMode
+      }
     }
-
-    callHooks(pluginHooks, 'init', cb)
-
-    const vueHooks = createVueHooksMap(cb)
-
-    return {
-      getVueHooks: () => vueHooks,
-      getVuexStore: () => vuexStore,
-      getVueI18n: () => vueI18n,
-      inQuirkMode: () => inQuirkMode
-    }
-  }]
+  ]
 }
 
-export default angular.module('ngVue.plugins', [])
-  .provider('$ngVue', ['$injector', ngVueProvider])
+export default angular.module('ngVue.plugins', []).provider('$ngVue', ['$injector', ngVueProvider])

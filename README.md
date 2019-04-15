@@ -1,6 +1,6 @@
 # ngVue
 
-[![Build status](https://api.travis-ci.org/ngVue/ngVue.svg)](https://travis-ci.org/ngVue/ngVue) [![JavaScript Style Guide](https://img.shields.io/badge/code%20style-standard-brightgreen.svg)](http://standardjs.com/) [![npm version](https://badge.fury.io/js/ngVue.svg)](https://badge.fury.io/js/ngVue) [![Dependency Status](https://david-dm.org/ngVue/ngVue.svg)](https://david-dm.org/ngVue/ngVue/) [![Monthly npm downloads](https://img.shields.io/npm/dm/ngVue.svg)](https://img.shields.io/npm/dm/ngVue.svg)
+[![Build status](https://api.travis-ci.org/ngVue/ngVue.svg)](https://travis-ci.org/ngVue/ngVue) [![JavaScript Style Guide](https://img.shields.io/badge/code%20style-standard-brightgreen.svg)](http://standardjs.com/) [![npm version](https://badge.fury.io/js/ngVue.svg)](https://badge.fury.io/js/ngVue) [![Dependency Status](https://david-dm.org/ngVue/ngVue.svg)](https://david-dm.org/ngVue/ngVue/) [![Monthly npm downloads](https://img.shields.io/npm/dm/ngVue.svg)](https://img.shields.io/npm/dm/ngVue.svg) [![code style: prettier](https://img.shields.io/badge/code_style-prettier-ff69b4.svg?style=flat-square)](https://github.com/prettier/prettier)
 
 [**VueJS**](https://vuejs.org/) is a library to build web interfaces with composable view components and reactive data binding. **ngVue**, inspired by [ngReact](https://github.com/ngReact/ngReact), is an Angular module that allows you to develop/use Vue components in AngularJS applications. ngVue can be used in the existing Angular applications and helps migrate the view parts of the application from Angular 1.x to Vue 2.
 
@@ -196,6 +196,66 @@ const VComponent = Vue.component('hello-component', {
     )
   }
 })
+```
+
+### Handling HTML attributes
+
+Just like regular Vue components, you can pass HTML attributes from the parent Angular component to your Vue component.
+The parent's `class` and `style` attributes will be merged with the corresponding Vue component attributes, while others will be passed down unless they conflict with attributes in the Vue component's own template.
+Keep in mind that when you pass down literal strings for anything other than `class` and `style` attributes, they must be surrounded by quotes, e.g. `data-value="'enabled'"`.
+
+```javascript
+angular.module("app")
+  .directive("myCustomButton", createVueComponent => {
+    return createVueComponent(Vue.component("MyCustomButton", MyCustomButton))
+  })
+```
+
+```html
+<my-custom-button
+  disabled="ctrl.isDisabled"
+  class="excellent"
+  tabindex="3"
+  type="'submit'"
+  v-props-button-text="'Click me'" />
+```
+
+```vue
+<template>
+<!-- tabindex, type, class, and disabled will appear on the button element -->
+<button>
+  {{ buttonText }}
+</button>
+</template>
+
+<script>
+export default {
+  name: "my-custom-button",
+  props: ["buttonText"],
+}
+</script>
+```
+
+Note that using `inheritAttrs: false` and binding `$attrs` to another element is also supported:
+
+```vue
+<template>
+<div>
+  <!-- tabindex and type should appear on the button element instead of the parent div -->
+  <button v-bind="$attrs">
+    {{ buttonText }}
+  </button>
+  <span>Other elements</span>
+</div>
+</template>
+
+<script>
+export default {
+  inheritAttrs: false,
+  name: "my-custom-button",
+  props: ["buttonText"],
+}
+</script>
 ```
 
 ### The createVueComponent factory

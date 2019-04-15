@@ -1,16 +1,11 @@
 import angular from 'angular'
 
 /**
- * @param dataExprsMap Object
- * @param dataExprsMap.data Object|string|null
- * @param dataExprsMap.props Object|string|null
+ * @param expr Object|string|null
  * @param scope Object
  * @returns {string|Object|null}
  */
-export default function evaluateValues (dataExprsMap, scope) {
-  const key = dataExprsMap.props ? 'props' : 'data'
-  const expr = dataExprsMap[key]
-
+export default function evaluateValues (expr, scope) {
   if (!expr) {
     return null
   }
@@ -20,7 +15,7 @@ export default function evaluateValues (dataExprsMap, scope) {
   }
 
   const evaluatedValues = {}
-  Object.keys(expr).forEach((key) => {
+  Object.keys(expr).forEach(key => {
     evaluatedValues[key] = scope.$eval(expr[key])
   })
 
