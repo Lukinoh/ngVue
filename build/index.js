@@ -174,7 +174,7 @@
                 var content = document.createElement("span"), slot = this.$refs.__slot__;
                 (jqElement[0].children.length ? $compile(jqElement[0].innerHTML)(scope) : $compile("<span>" + jqElement[0].innerHTML + "</span>")(scope)).each(function(index, element) {
                     content.appendChild(element);
-                }), slot.parentNode.replaceChild(content, slot);
+                }), slot.parentNode && slot.parentNode.replaceChild(content, slot);
             }
             angular__default.isFunction(mounted) && mounted.apply(this, arguments);
         };

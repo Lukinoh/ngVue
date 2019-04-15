@@ -48,7 +48,9 @@ export function ngVueLinker (componentName, jqElement, elAttributes, scope, $inj
         content.appendChild(element)
       })
 
-      slot.parentNode.replaceChild(content, slot)
+      if (slot.parentNode) {
+        slot.parentNode.replaceChild(content, slot)
+      }
     }
     if (angular.isFunction(mounted)) {
       mounted.apply(this, arguments)
