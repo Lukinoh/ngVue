@@ -2,22 +2,22 @@
     "object" == typeof exports && "undefined" != typeof module ? factory(require("angular")) : "function" == typeof define && define.amd ? define("ngVue", [ "angular" ], factory) : factory(global.angular);
 }(this, function(angular) {
     "use strict";
+    angular = "default" in angular ? angular.default : angular;
+    var originalModule = angular.module;
     function evaluateFilterFunction(name, def) {
-        return defineProperty({}, name, def());
-    }
-    function _hasDependence($injector, ngDef) {
-        return $injector.annotate(ngDef).length > 0;
-    }
-    var defineProperty = function(obj, key, value) {
-        return key in obj ? Object.defineProperty(obj, key, {
+        return obj = {}, key = name, value = def(), key in obj ? Object.defineProperty(obj, key, {
             value: value,
             enumerable: !0,
             configurable: !0,
             writable: !0
         }) : obj[key] = value, obj;
-    }, originalModule = (angular = "default" in angular ? angular.default : angular).module;
+        var obj, key, value;
+    }
+    function _hasDependence($injector, ngDef) {
+        return 0 < $injector.annotate(ngDef).length;
+    }
     angular.module = function(moduleName) {
-        for (var _len = arguments.length, otherArgs = Array(_len > 1 ? _len - 1 : 0), _key = 1; _key < _len; _key++) otherArgs[_key - 1] = arguments[_key];
+        for (var _len = arguments.length, otherArgs = Array(1 < _len ? _len - 1 : 0), _key = 1; _key < _len; _key++) otherArgs[_key - 1] = arguments[_key];
         var module = originalModule.apply(void 0, [ moduleName ].concat(otherArgs)), $injector = angular.injector([ "ng", moduleName ]);
         if (!$injector.has("$ngVue")) throw new Error("ngVue.plugins should be required as a dependency in your application");
         var originalFilter = module.filter, filters = [];

@@ -2,19 +2,21 @@
     "object" == typeof exports && "undefined" != typeof module ? factory(exports, require("angular"), require("vue")) : "function" == typeof define && define.amd ? define("ngVue", [ "exports", "angular", "vue" ], factory) : factory(global.ngVue = global.ngVue || {}, global.angular, global.Vue);
 }(this, function(exports, angular, Vue) {
     "use strict";
+    var angular__default = "default" in angular ? angular.default : angular;
+    Vue = "default" in Vue ? Vue.default : Vue;
+    var nestRE = /^(attrs|props|on|nativeOn|class|style|hook)$/, babelHelperVueJsxMergeProps = function(objs) {
+        return objs.reduce(function(a, b) {
+            var aa, bb, key, nestedKey, temp;
+            for (key in b) if (aa = a[key], bb = b[key], aa && nestRE.test(key)) if ("class" === key && ("string" == typeof aa && (temp = aa, 
+            a[key] = aa = {}, aa[temp] = !0), "string" == typeof bb && (temp = bb, b[key] = bb = {}, 
+            bb[temp] = !0)), "on" === key || "nativeOn" === key || "hook" === key) for (nestedKey in bb) aa[nestedKey] = mergeFn(aa[nestedKey], bb[nestedKey]); else if (Array.isArray(aa)) a[key] = aa.concat(bb); else if (Array.isArray(bb)) a[key] = [ aa ].concat(bb); else for (nestedKey in bb) aa[nestedKey] = bb[nestedKey]; else a[key] = b[key];
+            return a;
+        }, {});
+    };
     function mergeFn(a, b) {
         return function() {
-            a.apply(this, arguments), b.apply(this, arguments);
+            a && a.apply(this, arguments), b && b.apply(this, arguments);
         };
-    }
-    function getVueComponent(name, $injector) {
-        return angular__default.isFunction(name) ? name : $injector.get(name);
-    }
-    function lowerFirst(letter) {
-        return letter.charAt(0).toLowerCase() + letter.slice(1);
-    }
-    function extractPropName(attrPropName, removedKey) {
-        return lowerFirst(attrPropName.slice(removedKey.length));
     }
     function extractExpressions(exprType, attributes) {
         var objectExprKey = {
@@ -23,30 +25,42 @@
             on: "vOn"
         }[exprType], objectPropExprRegExp = new RegExp(objectExprKey, "i"), objectExpr = attributes[objectExprKey];
         if (angular__default.isDefined(objectExpr)) return objectExpr;
-        var expressions = Object.keys(attributes).filter(function(attr) {
+        var expressions = void 0;
+        if (0 === (expressions = "htmlAttributes" === exprType ? function(attributes) {
+            return Object.keys(attributes).filter(function(attr) {
+                var isSpecialAttr = /^(vProps|vData|vOn|vDirectives|watchDepth|ng)/i.test(attr), isJqliteProperty = "$" === attr[0];
+                return !isSpecialAttr && !isJqliteProperty && "class" !== attr && "style" !== attr;
+            });
+        }(attributes) : Object.keys(attributes).filter(function(attr) {
             return objectPropExprRegExp.test(attr);
-        });
-        if (0 === expressions.length) return null;
+        })).length) return null;
         var exprsMap = {};
         return expressions.forEach(function(attrExprName) {
-            var exprName = extractPropName(attrExprName, objectExprKey);
-            exprsMap[exprName] = attributes[attrExprName];
+            if (objectExprKey) {
+                var exprName = (removedKey = objectExprKey, propName = attrExprName.slice(removedKey.length), 
+                (letter = propName).charAt(0).toLowerCase() + letter.slice(1));
+                exprsMap[exprName] = attributes[attrExprName];
+            } else {
+                var attrName = attributes.$attr[attrExprName], attrValue = void 0;
+                attrValue = "" === attributes[attrExprName] ? "'" + attrExprName + "'" : attributes[attrExprName], 
+                exprsMap[attrName] = attrValue;
+            }
+            var removedKey, letter, propName;
         }), exprsMap;
     }
-    function getExpressions(attributes) {
-        return {
-            data: extractExpressions("data", attributes),
-            props: extractExpressions("props", attributes),
-            events: extractExpressions("on", attributes)
-        };
-    }
-    function watch(expressions, reactiveData) {
-        return function(watchFunc) {
-            angular.isString(expressions) ? watchFunc(expressions, Vue.set.bind(Vue, reactiveData, "_v")) : Object.keys(expressions).forEach(function(name) {
-                watchFunc(expressions[name], Vue.set.bind(Vue, reactiveData._v, name));
-            });
-        };
-    }
+    var _extends = Object.assign || function(target) {
+        for (var i = 1; i < arguments.length; i++) {
+            var source = arguments[i];
+            for (var key in source) Object.prototype.hasOwnProperty.call(source, key) && (target[key] = source[key]);
+        }
+        return target;
+    }, toConsumableArray = function(arr) {
+        if (Array.isArray(arr)) {
+            for (var i = 0, arr2 = Array(arr.length); i < arr.length; i++) arr2[i] = arr[i];
+            return arr2;
+        }
+        return Array.from(arr);
+    };
     function notify(setter, inQuirkMode) {
         return function(newVal) {
             var value = newVal;
@@ -54,10 +68,17 @@
             setter(value);
         };
     }
-    function watchExpressions(dataExprsMap, reactiveData, options, scope) {
-        var expressions = dataExprsMap.props ? dataExprsMap.props : dataExprsMap.data;
-        if (expressions) {
-            var depth = options.depth, quirk = options.quirk, watcher = watch(expressions, reactiveData);
+    function watchExpressions(dataExprsMap, reactiveData, options, scope, type) {
+        var expressions = void 0;
+        if ("props" === type ? expressions = dataExprsMap.props ? dataExprsMap.props : dataExprsMap.data : "attrs" === type && (expressions = dataExprsMap.htmlAttributes), 
+        expressions) {
+            var depth = options.depth, quirk = options.quirk, watcher = function(expressions, reactiveData, type) {
+                return function(watchFunc) {
+                    angular.isString(expressions) ? watchFunc(expressions, Vue.set.bind(Vue, reactiveData._v, type)) : Object.keys(expressions).forEach(function(name) {
+                        watchFunc(expressions[name], Vue.set.bind(Vue, reactiveData._v[type], name));
+                    });
+                };
+            }(expressions, reactiveData, type);
             switch (depth) {
               case "value":
                 watcher(function(expression, setter) {
@@ -79,8 +100,7 @@
             }
         }
     }
-    function evaluateValues(dataExprsMap, scope) {
-        var expr = dataExprsMap[dataExprsMap.props ? "props" : "data"];
+    function evaluateValues(expr, scope) {
         if (!expr) return null;
         if (angular__default.isString(expr)) return scope.$eval(expr);
         var evaluatedValues = {};
@@ -88,101 +108,7 @@
             evaluatedValues[key] = scope.$eval(expr[key]);
         }), evaluatedValues;
     }
-    function evaluateEvents(dataExprsMap, scope) {
-        var events = dataExprsMap.events;
-        if (!events || !angular__default.isObject(events)) return null;
-        var evaluatedEvents = {};
-        return Object.keys(events).forEach(function(eventName) {
-            evaluatedEvents[eventName] = scope.$eval(events[eventName]);
-            var fn = evaluatedEvents[eventName];
-            angular__default.isFunction(fn) && (evaluatedEvents[eventName] = function() {
-                var _arguments = arguments;
-                return scope.$evalAsync(function() {
-                    return fn.apply(null, _arguments);
-                });
-            });
-        }), evaluatedEvents;
-    }
-    function getTypeOf(value) {
-        return value.constructor.name;
-    }
-    function evaluateDirectives(attributes, scope) {
-        var directivesExpr = attributes.vDirectives;
-        if (angular__default.isUndefined(directivesExpr)) return null;
-        var directives = scope.$eval(directivesExpr), transformer = transformers[getTypeOf(directives)];
-        return transformer ? transformer(directives) : null;
-    }
-    function ngVueLinker(componentName, jqElement, elAttributes, scope, $injector) {
-        var $ngVue = $injector.has("$ngVue") ? $injector.get("$ngVue") : null, dataExprsMap = getExpressions(elAttributes), Component = getVueComponent(componentName, $injector), directives = evaluateDirectives(elAttributes, scope) || [], reactiveData = {
-            _v: evaluateValues(dataExprsMap, scope) || {}
-        }, on = evaluateEvents(dataExprsMap, scope) || {}, inQuirkMode = !!$ngVue && $ngVue.inQuirkMode(), vueHooks = $ngVue ? $ngVue.getVueHooks() : {}, vuexStore = $ngVue ? {
-            store: $ngVue.getVuexStore()
-        } : {}, vueI18n = $ngVue ? {
-            i18n: $ngVue.getVueI18n()
-        } : {}, watchOptions = {
-            depth: elAttributes.watchDepth,
-            quirk: inQuirkMode
-        };
-        watchExpressions(dataExprsMap, reactiveData, watchOptions, scope);
-        var vueInstance = new Vue(_extends({
-            name: "NgVue",
-            el: jqElement[0],
-            data: reactiveData,
-            render: function(h) {
-                return h(Component, index([ {
-                    directives: directives
-                }, {
-                    props: reactiveData._v,
-                    on: on
-                } ]), [ jqElement.html() ]);
-            }
-        }, vueHooks, vuexStore, vueI18n));
-        scope.$on("$destroy", function() {
-            vueInstance.$destroy(), vueInstance.$el.remove();
-        });
-    }
-    function ngVueComponentFactory($injector) {
-        return function(componentName, ngDirectiveConfig) {
-            var config = {
-                restrict: "E",
-                link: function(scope, elem, attrs) {
-                    ngVueLinker(componentName, elem, attrs, scope, $injector);
-                }
-            };
-            return angular__default.extend(config, ngDirectiveConfig);
-        };
-    }
-    function ngVueComponentDirective($injector) {
-        return {
-            restrict: "E",
-            link: function(scope, elem, attrs) {
-                ngVueLinker(attrs.name, elem, attrs, scope, $injector);
-            }
-        };
-    }
-    var angular__default = "default" in angular ? angular.default : angular;
-    Vue = "default" in Vue ? Vue.default : Vue;
-    var nestRE = /^(attrs|props|on|nativeOn|class|style|hook)$/, index = function(objs) {
-        return objs.reduce(function(a, b) {
-            var aa, bb, key, nestedKey, temp;
-            for (key in b) if (aa = a[key], bb = b[key], aa && nestRE.test(key)) if ("class" === key && ("string" == typeof aa && (temp = aa, 
-            a[key] = aa = {}, aa[temp] = !0), "string" == typeof bb && (temp = bb, b[key] = bb = {}, 
-            bb[temp] = !0)), "on" === key || "nativeOn" === key || "hook" === key) for (nestedKey in bb) aa[nestedKey] = mergeFn(aa[nestedKey], bb[nestedKey]); else if (Array.isArray(aa)) a[key] = aa.concat(bb); else if (Array.isArray(bb)) a[key] = [ aa ].concat(bb); else for (nestedKey in bb) aa[nestedKey] = bb[nestedKey]; else a[key] = b[key];
-            return a;
-        }, {});
-    }, _extends = Object.assign || function(target) {
-        for (var i = 1; i < arguments.length; i++) {
-            var source = arguments[i];
-            for (var key in source) Object.prototype.hasOwnProperty.call(source, key) && (target[key] = source[key]);
-        }
-        return target;
-    }, toConsumableArray = function(arr) {
-        if (Array.isArray(arr)) {
-            for (var i = 0, arr2 = Array(arr.length); i < arr.length; i++) arr2[i] = arr[i];
-            return arr2;
-        }
-        return Array.from(arr);
-    }, transformers = {
+    var transformers = {
         Object: function(value) {
             return [ value ];
         },
@@ -196,7 +122,112 @@
                 };
             });
         }
-    }, ngVue = angular__default.module("ngVue", []).directive("vueComponent", [ "$injector", ngVueComponentDirective ]).factory("createVueComponent", [ "$injector", ngVueComponentFactory ]);
+    };
+    var SPECIAL_ATTRIBUTE_KEYS = [ "class", "style" ];
+    function ngVueLinker(componentName, jqElement, elAttributes, scope, $injector) {
+        var attributes, $ngVue = $injector.has("$ngVue") ? $injector.get("$ngVue") : null, $compile = $injector.get("$compile"), dataExprsMap = {
+            data: extractExpressions("data", attributes = elAttributes),
+            props: extractExpressions("props", attributes),
+            events: extractExpressions("on", attributes),
+            htmlAttributes: extractExpressions("htmlAttributes", attributes)
+        }, Component = function(name, $injector) {
+            return angular__default.isFunction(name) ? name : $injector.get(name);
+        }(componentName, $injector), directives = function(attributes, scope) {
+            var directivesExpr = attributes.vDirectives;
+            if (angular__default.isUndefined(directivesExpr)) return null;
+            var value, directives = scope.$eval(directivesExpr), transformer = transformers[(value = directives, 
+            value.constructor.name)];
+            return transformer ? transformer(directives) : null;
+        }(elAttributes, scope) || [], reactiveData = {
+            _v: {
+                props: evaluateValues(dataExprsMap.props || dataExprsMap.data, scope) || {},
+                attrs: evaluateValues(dataExprsMap.htmlAttributes, scope) || {},
+                special: function(attributes) {
+                    return SPECIAL_ATTRIBUTE_KEYS.reduce(function(specialAttributes, key) {
+                        var value = attributes[key];
+                        return (value || attributes[attributes.$normalize("ng-" + key)]) && (specialAttributes[key] = value), 
+                        specialAttributes;
+                    }, {});
+                }(elAttributes)
+            }
+        }, on = function(dataExprsMap, scope) {
+            var events = dataExprsMap.events;
+            if (!events || !angular__default.isObject(events)) return null;
+            var evaluatedEvents = {};
+            return Object.keys(events).forEach(function(eventName) {
+                evaluatedEvents[eventName] = scope.$eval(events[eventName]);
+                var fn = evaluatedEvents[eventName];
+                angular__default.isFunction(fn) && (evaluatedEvents[eventName] = function() {
+                    var _arguments = arguments;
+                    return scope.$evalAsync(function() {
+                        return fn.apply(null, _arguments);
+                    });
+                });
+            }), evaluatedEvents;
+        }(dataExprsMap, scope) || {}, inQuirkMode = !!$ngVue && $ngVue.inQuirkMode(), vueHooks = $ngVue ? $ngVue.getVueHooks() : {}, vuexStore = $ngVue ? {
+            store: $ngVue.getVuexStore()
+        } : {}, vueI18n = $ngVue ? {
+            i18n: $ngVue.getVueI18n()
+        } : {}, rootProps = $ngVue ? $ngVue.getRootProps() : {}, mounted = rootProps.mounted;
+        rootProps.mounted = function() {
+            if (jqElement[0].innerHTML.trim()) {
+                var html = $compile(jqElement[0].innerHTML)(scope), slot = this.$refs.__slot__;
+                slot.parentNode.replaceChild(html[0], slot);
+            }
+            angular__default.isFunction(mounted) && mounted.apply(this, arguments);
+        };
+        var watchOptions = {
+            depth: elAttributes.watchDepth,
+            quirk: inQuirkMode
+        };
+        watchExpressions(dataExprsMap, reactiveData, watchOptions, scope, "props"), watchExpressions(dataExprsMap, reactiveData, watchOptions, scope, "attrs"), 
+        function(reactiveData, element, scope) {
+            Object.keys(reactiveData._v.special).forEach(function(key) {
+                scope.$watch(function() {
+                    return element.attr(key);
+                }, function(newValue) {
+                    Vue.set(reactiveData._v.special, key, newValue);
+                });
+            });
+        }(reactiveData, jqElement, scope);
+        var vueInstance = new Vue(_extends({
+            name: "NgVue",
+            el: jqElement[0],
+            data: reactiveData,
+            render: function(h) {
+                return h(Component, babelHelperVueJsxMergeProps([ {
+                    directives: directives
+                }, {
+                    props: reactiveData._v.props,
+                    on: on,
+                    attrs: reactiveData._v.attrs
+                }, reactiveData._v.special ]), [ h("span", {
+                    ref: "__slot__"
+                }) ]);
+            }
+        }, vueHooks, vuexStore, vueI18n, rootProps));
+        scope.$on("$destroy", function() {
+            vueInstance.$destroy(), angular__default.element(vueInstance.$el).remove(), vueInstance = null;
+        });
+    }
+    var ngVue = angular__default.module("ngVue", []).directive("vueComponent", [ "$injector", function($injector) {
+        return {
+            restrict: "E",
+            link: function(scope, elem, attrs) {
+                ngVueLinker(attrs.name, elem, attrs, scope, $injector);
+            }
+        };
+    } ]).factory("createVueComponent", [ "$injector", function($injector) {
+        return function(componentName, ngDirectiveConfig) {
+            var config = {
+                restrict: "E",
+                link: function(scope, elem, attrs) {
+                    ngVueLinker(componentName, elem, attrs, scope, $injector);
+                }
+            };
+            return angular__default.extend(config, ngDirectiveConfig);
+        };
+    } ]);
     exports.ngVue = ngVue, Object.defineProperty(exports, "__esModule", {
         value: !0
     });
