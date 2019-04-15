@@ -171,8 +171,10 @@
         } : {}, rootProps = $ngVue ? $ngVue.getRootProps() : {}, mounted = rootProps.mounted;
         rootProps.mounted = function() {
             if (jqElement[0].innerHTML.trim()) {
-                var html = $compile(jqElement[0].innerHTML)(scope), slot = this.$refs.__slot__;
-                slot.parentNode.replaceChild(html[0], slot);
+                var content = document.createElement("span"), slot = this.$refs.__slot__;
+                (jqElement[0].children.length ? $compile(jqElement[0].innerHTML)(scope) : $compile("<span>" + jqElement[0].innerHTML + "</span>")(scope)).each(function(index, element) {
+                    content.appendChild(element);
+                }), slot.parentNode.replaceChild(content, slot);
             }
             angular__default.isFunction(mounted) && mounted.apply(this, arguments);
         };

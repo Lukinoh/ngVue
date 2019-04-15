@@ -34,9 +34,21 @@ export function ngVueLinker (componentName, jqElement, elAttributes, scope, $inj
   const mounted = rootProps.mounted
   rootProps.mounted = function () {
     if (jqElement[0].innerHTML.trim()) {
-      const html = $compile(jqElement[0].innerHTML)(scope)
+      const content = document.createElement('span')
       const slot = this.$refs.__slot__
-      slot.parentNode.replaceChild(html[0], slot)
+
+      let html
+      if (jqElement[0].children.length) {
+        html = $compile(jqElement[0].innerHTML)(scope)
+      } else {
+        html = $compile("<span>" + jqElement[0].innerHTML + "</span>")(scope)
+      }
+
+      html.each(function (index, element) {
+        content.appendChild(element)
+      })
+
+      slot.parentNode.replaceChild(content, slot)
     }
     if (angular.isFunction(mounted)) {
       mounted.apply(this, arguments)
