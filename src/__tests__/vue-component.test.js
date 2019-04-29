@@ -4,6 +4,7 @@ import Vue from 'vue'
 import ngHtmlCompiler from './utils/ngHtmlCompiler'
 
 import HelloComponent from './fixtures/HelloComponent'
+import StateComponent from './fixtures/StateComponent'
 import HelloWrappedComponent from './fixtures/HelloWrappedComponent'
 import PersonsComponent from './fixtures/PersonsComponent'
 import ButtonComponent from './fixtures/ButtonComponent'
@@ -88,6 +89,36 @@ describe('vue-component', () => {
       expect(elem[0].innerHTML).toBe(
         '<div class="foo" style="font-size: 2em;"><span random="hello" tabindex="1" disabled="disabled" data-qa="John">Hello  </span></div>'
       )
+    })
+  })
+
+  describe('v-props extraction', () => {
+    beforeEach(() => {
+      $provide.value('StateComponent', StateComponent)
+    })
+
+    it('should render a vue component with state property from scope (v-props-tate syntax is correct)', () => {
+      const scope = $rootScope.$new()
+      scope.state = 'ON'
+      const elem = compileHTML(
+        `<vue-component
+          name="StateComponent"
+          v-props-tate="state" />`,
+        scope
+      )
+      expect(elem[0].innerHTML).toBe('<span>State is ON</span>')
+    })
+
+    it('should render a vue component with no state property from scope (v-prop-state syntax is incorrect)', () => {
+      const scope = $rootScope.$new()
+      scope.state = 'ON'
+      const elem = compileHTML(
+        `<vue-component
+          name="StateComponent"
+          v-prop-state="state" />`,
+        scope
+      )
+      expect(elem[0].innerHTML).toBe('<span>State is OFF</span>')
     })
   })
 
@@ -250,14 +281,26 @@ describe('vue-component', () => {
   })
 
   describe('events', () => {
-    it('should handle custom events from Vue', () => {
+    it('should handle custom events from Vue, with camelCase syntax in $emit function', () => {
       $provide.value('ButtonComponent', ButtonComponent)
 
       const scope = $rootScope.$new()
       scope.handleHelloEvent = jest.fn()
 
-      const elem = compileHTML(`<vue-component name="ButtonComponent" v-on-hello="handleHelloEvent" />`, scope)
+      const elem = compileHTML(`<vue-component name="ButtonComponent" v-on-hello-world="handleHelloEvent" />`, scope)
       elem.find('button')[0].click()
+      scope.$digest()
+      expect(scope.handleHelloEvent).toHaveBeenCalledWith('Hello, World!')
+    })
+
+    it('should handle custom events from Vue, with kebab-case syntax in $emit function', () => {
+      $provide.value('ButtonComponent', ButtonComponent)
+
+      const scope = $rootScope.$new()
+      scope.handleHelloEvent = jest.fn()
+
+      const elem = compileHTML(`<vue-component name="ButtonComponent" v-on-hello-world="handleHelloEvent" />`, scope)
+      elem.find('button')[1].click()
       scope.$digest()
       expect(scope.handleHelloEvent).toHaveBeenCalledWith('Hello, World!')
     })
